@@ -125,6 +125,8 @@ if __name__ == '__main__':
         pred = UNet.predict(xx)[..., 0].reshape(inp_shape[:2])
         mask = yy[..., 0].reshape(inp_shape[:2])
 
+
+        #Parameters
         gt = mask > 0.5
         pr = pred > 0.5
 
@@ -136,37 +138,21 @@ if __name__ == '__main__':
         prs.append(pr)
         ious[i] = IoU(gt, pr)
         dices[i] = Dice(gt, pr)
-        print (df.iloc[i][0], ious[i], dices[i])
+        print(df.iloc[i][0], ious[i], dices[i])
 
-        if i < 4:
-            plt.subplot(4, 4, 4*i+1)
-            plt.title('Processed ' + df.iloc[i][0])
-            plt.axis('off')
-            plt.imshow(img, cmap='gray')
+        #plt.subplot(4, 4, 4*i+3)
+        #plt.title('Prediction')
+        plt.axis('off')
+        print("sdfghj")
+        plt.imshow(cv2.bitwise_and(img, img, mask=pred.astype(np.uint8)), cmap=plt.cm.bone)
 
-            plt.subplot(4, 4, 4 * i + 2)
-            plt.title('IoU = {:.4f}'.format(ious[i]))
-            plt.axis('off')
-            plt.imshow(masked2(img, gt, pr, 1), cmap=plt.cm.bone)
-
-            plt.subplot(4, 4, 4*i+3)
-            plt.title('Prediction')
-            plt.axis('off')
-            print("sdfghj")
-            plt.imshow(cv2.bitwise_and(img, img, mask=pred.astype(np.uint8)), cmap=plt.cm.bone)
-            #plt.imshow(pred, cmap='jet')
-
-            plt.subplot(4, 4, 4*i+4)
-            plt.title('Difference')
-            plt.axis('off')
-            plt.imshow(np.dstack((pr.astype(np.int8), gt.astype(np.int8), pr.astype(np.int8))))
 
         i += 1
         if i == n_test:
             break
 
-    print ('Mean IoU:', ious.mean())
-    print ('Mean Dice:', dices.mean())
+    print('Mean IoU:', ious.mean())
+    print('Mean Dice:', dices.mean())
     plt.tight_layout()
     plt.savefig('results.png')
     plt.show()
