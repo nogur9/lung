@@ -4,7 +4,7 @@ from keras.models import load_model
 from keras.preprocessing.image import ImageDataGenerator
 from skimage import morphology, io, color, exposure, img_as_float, transform
 from matplotlib import pyplot as plt
-
+import cv2
 def loadDataGeneral(df, path, im_shape):
     X, y = [], []
     for i, item in df.iterrows():
@@ -54,6 +54,25 @@ def masked(img, gt, mask, alpha=1):
     boundary = np.logical_xor((morphology.dilation(gt, morphology.disk(3))), (gt))
     color_mask[mask == 1] = [0, 0, 1]
     color_mask[boundary == 1] = [1, 0, 0]
+    img_color = np.dstack((img, img, img))
+
+    img_hsv = color.rgb2hsv(img_color)
+    color_mask_hsv = color.rgb2hsv(color_mask)
+
+    img_hsv[..., 0] = color_mask_hsv[..., 0]
+    img_hsv[..., 1] = color_mask_hsv[..., 1] * alpha
+
+    img_masked = color.hsv2rgb(img_hsv)
+    return img_masked
+
+
+def masked2(img, gt, mask, alpha=1):
+    """Returns image with GT lung field outlined with red, predicted lung field
+    filled with blue."""
+    rows, cols = img.shape
+    color_mask = np.zeros((rows, cols, 3))
+    boundary = np.logical_xor((morphology.dilation(gt, morphology.disk(3))), (gt))
+    color_mask[mask == 1] = [0, 0, 0]
     img_color = np.dstack((img, img, img))
 
     img_hsv = color.rgb2hsv(img_color)
@@ -128,12 +147,14 @@ if __name__ == '__main__':
             plt.subplot(4, 4, 4 * i + 2)
             plt.title('IoU = {:.4f}'.format(ious[i]))
             plt.axis('off')
-            plt.imshow(masked(img, gt, pr, 1))
+            plt.imshow(masked2(img, gt, pr, 1), cmap=plt.cm.bone)
 
             plt.subplot(4, 4, 4*i+3)
             plt.title('Prediction')
             plt.axis('off')
-            plt.imshow(pred, cmap='jet')
+            print("sdfghj")
+            plt.imshow(cv2.bitwise_and(img, img, mask=pred.astype(np.uint8)), cmap=plt.cm.bone)
+            #plt.imshow(pred, cmap='jet')
 
             plt.subplot(4, 4, 4*i+4)
             plt.title('Difference')
@@ -150,53 +171,35 @@ if __name__ == '__main__':
     plt.savefig('results.png')
     plt.show()
 
-def masked(img, gt, mask, alpha=1):
-    """Returns image with GT lung field outlined with red, predicted lung field
-    filled with blue."""
-    rows, cols = img.shape
-    color_mask = np.zeros((rows, cols, 3))
-    boundary = np.logical_xor((morphology.dilation(gt, morphology.disk(3))), (gt))
-    color_mask[mask == 1] = [0, 0, 1]
-    color_mask[boundary == 1] = [1, 0, 0]
-    img_color = np.dstack((img, img, img))
-
-    img_hsv = color.rgb2hsv(img_color)
-    color_mask_hsv = color.rgb2hsv(color_mask)
-
-    img_hsv[..., 0] = color_mask_hsv[..., 0]
-    img_hsv[..., 1] = color_mask_hsv[..., 1] * alpha
-
-    img_masked = color.hsv2rgb(img_hsv)
-    return img_masked
-
-def tmpi_tmp():
-    images, masks = dataset.load_images(imgs_anns_dict)
-
-    plt.figure(figsize=(20, 10))
-
-    img_index = random.choice(range(len(images)))
-
-    plt.subplot(1, 4, 1)
-    random_img = images[img_index, :, :, 0]
-    print(random_img.shape)
-    plt.imshow(random_img, cmap=plt.cm.bone)
-    plt.axis('off')
-    plt.title('Lung X-Ray')
-
-    plt.subplot(1, 4, 2)
-    random_mask = masks[img_index, :, :, 0]
-    plt.imshow(random_mask, cmap=plt.cm.bone)
-    plt.axis('off')
-    plt.title('Mask Ground Truth')
-
-    random_img_2 = np.expand_dims(np.expand_dims(random_img, axis=0), axis=3)
-    mask = model.predict(random_img_2)[0][:, :, 0] > 0.05
-    plt.subplot(1, 4, 3)
-    plt.imshow(mask, cmap=plt.cm.bone)
-    plt.axis('off')
-    plt.title('Predicted Mask')
-
-    plt.subplot(1, 4, 4)
-    plt.imshow(cv2.bitwise_and(random_img, random_img, mask=mask.astype(np.uint8)), cmap=plt.cm.bone)
-    plt.axis('off')
-    plt.title('Predicted Lung Segmentation')
+#
+# def tmpi_tmp():
+#     images, masks = dataset.load_images(imgs_anns_dict)
+#
+#     plt.figure(figsize=(20, 10))
+#
+#     img_index = random.choice(range(len(images)))
+#
+#     plt.subplot(1, 4, 1)
+#     random_img = images[img_index, :, :, 0]
+#     print(random_img.shape)
+#     plt.imshow(random_img, cmap=plt.cm.bone)
+#     plt.axis('off')
+#     plt.title('Lung X-Ray')
+#
+#     plt.subplot(1, 4, 2)
+#     random_mask = masks[img_index, :, :, 0]
+#     plt.imshow(random_mask, cmap=plt.cm.bone)
+#     plt.axis('off')
+#     plt.title('Mask Ground Truth')
+#
+#     random_img_2 = np.expand_dims(np.expand_dims(random_img, axis=0), axis=3)
+#     mask = model.predict(random_img_2)[0][:, :, 0] > 0.05
+#     plt.subplot(1, 4, 3)
+#     plt.imshow(mask, cmap=plt.cm.bone)
+#     plt.axis('off')
+#     plt.title('Predicted Mask')
+#
+#     plt.subplot(1, 4, 4)
+#     plt.imshow(cv2.bitwise_and(random_img, random_img, mask=mask.astype(np.uint8)), cmap=plt.cm.bone)
+#     plt.axis('off')
+#     plt.title('Predicted Lung Segmentation')
