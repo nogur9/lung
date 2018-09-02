@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import pandas as pd
 from keras.models import load_model
@@ -119,10 +121,11 @@ if __name__ == '__main__':
 
     gts, prs = [], []
     i = 0
+    j=0
     plt.figure(figsize=(10, 10))
     for xx, yy in test_gen.flow(X, y, batch_size=1):
-        img = exposure.rescale_intensity(np.squeeze(xx), out_range=(0,1))
-        pred = UNet.predict(xx)[..., 0].reshape(inp_shape[:2])
+        img = exposure.rescale_intensity(np.squeeze(X[j]), out_range=(0,1))
+        pred = UNet.predict(X[j][np.newaxis,:,:,:])[..., 0].reshape(inp_shape[:2])
         mask = yy[..., 0].reshape(inp_shape[:2])
 
 
@@ -140,13 +143,13 @@ if __name__ == '__main__':
         dices[i] = Dice(gt, pr)
         print(df.iloc[i][0], ious[i], dices[i])
 
-        #plt.subplot(4, 4, 4*i+3)
-        #plt.title('Prediction')
+        plt.subplot(4, 4, 4*i+3)
+        plt.title('Prediction')
         plt.axis('off')
         print("sdfghj")
         plt.imshow(cv2.bitwise_and(img, img, mask=pred.astype(np.uint8)), cmap=plt.cm.bone)
 
-
+        j+=1
         i += 1
         if i == n_test:
             break
@@ -157,7 +160,27 @@ if __name__ == '__main__':
     plt.savefig('results.png')
     plt.show()
 
-#
+def masked(img, gt, mask, alpha=1):
+    """Returns image with GT lung field outlined with red, predicted lung field
+    filled with blue."""
+    rows, cols = img.shape
+    color_mask = np.zeros((rows, cols, 3))
+    boundary = np.logical_xor((morphology.dilation(gt, morphology.disk(3))), (gt))
+    color_mask[mask == 1] = [0, 0, 1]
+    color_mask[boundary == 1] = [1, 0, 0]
+    img_color = np.dstack((img, img, img))
+
+    img_hsv = color.rgb2hsv(img_color)
+    color_mask_hsv = color.rgb2hsv(color_mask)
+
+    img_hsv[..., 0] = color_mask_hsv[..., 0]
+    img_hsv[..., 1] = color_mask_hsv[..., 1] * alpha
+
+    img_masked = color.hsv2rgb(img_hsv)
+    return img_masked
+
+
+
 # def tmpi_tmp():
 #     images, masks = dataset.load_images(imgs_anns_dict)
 #
